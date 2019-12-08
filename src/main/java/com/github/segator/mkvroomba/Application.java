@@ -249,7 +249,7 @@ public class Application {
                 }
                 if(subsToEncode.size()>0){
                     System.out.println("[EXEC]"+ mkvExtractCommand);
-                    mkvextract = Runtime.getRuntime().exec(mkvExtractCommand.toString());
+                    mkvextract = Runtime.getRuntime().exec(translateCommandline(mkvExtractCommand.toString()));
                     try {
                         inheritIO(mkvextract.getInputStream(),new PrintStream(new NullOutputStream()),"");
                         inheritIO(mkvextract.getErrorStream(),new PrintStream(new NullOutputStream()),"");
@@ -269,7 +269,7 @@ public class Application {
                                         +outputFile+"\" --tesseractlanguage "+langConverter(stream.getTags().getLanguage());
                                 System.out.println("[EXEC]"+ pgstosrt);
                                 try{
-                                    pgssrt = Runtime.getRuntime().exec(pgstosrt);
+                                    pgssrt = Runtime.getRuntime().exec(translateCommandline(pgstosrt));
                                     inheritIO(pgssrt.getInputStream(),System.err,"[pgstosrt]["+stream.getIndex()+"]");
                                     inheritIO(pgssrt.getErrorStream(),new PrintStream(new NullOutputStream()),"");
                                     pgssrt.waitFor();
@@ -292,7 +292,7 @@ public class Application {
 
 
                 System.out.println("[EXEC] "+ffmpegCommandString);
-                ffmpeg = Runtime.getRuntime().exec(ffmpegCommandString);
+                ffmpeg = Runtime.getRuntime().exec(translateCommandline(ffmpegCommandString));
                 try {
                     inheritIO(ffmpeg.getInputStream(),System.err,"");
                     inheritIO(ffmpeg.getErrorStream(),System.err,"");
@@ -358,4 +358,64 @@ public class Application {
     }
     //ffmpeg -i "The.Lion.King.2019.MULTi.2160p.UHD.BluRay.REMUX.HDR.HEVC.TrueHD.Atmos.7.1-TOXIC.mkv" -map 0  -map_metadata 0
     // -vcodec copy -scodec copy -c:a copy  -c:a:0 ac3 -b:a:0 640k  -metadata:s:a:0 title="patata" -t 60 output.mkv"
+    public static String[] translateCommandline(String toProcess) {
+        if (toProcess == null || toProcess.length() == 0) {
+            //no command? no string
+            return new String[0];
+        }
+        // parse with a simple finite state machine
+
+        final int normal = 0;
+        final int inQuote = 1;
+        final int inDoubleQuote = 2;
+        int state = normal;
+        final StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
+        final ArrayList<String> result = new ArrayList<String>();
+        final StringBuilder current = new StringBuilder();
+        boolean lastTokenHasBeenQuoted = false;
+
+        while (tok.hasMoreTokens()) {
+            String nextTok = tok.nextToken();
+            switch (state) {
+                case inQuote:
+                    if ("\'".equals(nextTok)) {
+                        lastTokenHasBeenQuoted = true;
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                case inDoubleQuote:
+                    if ("\"".equals(nextTok)) {
+                        lastTokenHasBeenQuoted = true;
+                        state = normal;
+                    } else {
+                        current.append(nextTok);
+                    }
+                    break;
+                default:
+                    if ("\'".equals(nextTok)) {
+                        state = inQuote;
+                    } else if ("\"".equals(nextTok)) {
+                        state = inDoubleQuote;
+                    } else if (" ".equals(nextTok)) {
+                        if (lastTokenHasBeenQuoted || current.length() != 0) {
+                            result.add(current.toString());
+                            current.setLength(0);
+                        }
+                    } else {
+                        current.append(nextTok);
+                    }
+                    lastTokenHasBeenQuoted = false;
+                    break;
+            }
+        }
+        if (lastTokenHasBeenQuoted || current.length() != 0) {
+            result.add(current.toString());
+        }
+        if (state == inQuote || state == inDoubleQuote) {
+            throw new RuntimeException("unbalanced quotes in " + toProcess);
+        }
+        return result.toArray(new String[result.size()]);
+    }
 }
