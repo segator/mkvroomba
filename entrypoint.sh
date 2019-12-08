@@ -1,2 +1,2 @@
 #!/bin/sh
-java -jar mkvroomba.jar
+java -jar mkvroomba.jar $@

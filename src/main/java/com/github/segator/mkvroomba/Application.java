@@ -137,7 +137,7 @@ public class Application {
         StringBuilder mkvExtractCommand = new StringBuilder("mkvextract tracks \"").append(mkvInputFile.toString()).append("\" ");
         StringBuilder ffmpegCommand = new StringBuilder("ffmpeg  -hide_banner {input_files} {map_files} ");
         ObjectMapper mapper = new ObjectMapper();
-        String[] ffprobe = {"ffprobe.exe","-v","quiet","-print_format","json","-show_format","-show_streams",mkvInputFile.toString()};
+        String[] ffprobe = {"ffprobe","-v","quiet","-print_format","json","-show_format","-show_streams",mkvInputFile.toString()};
         Process ffprobeProc = Runtime.getRuntime().exec(ffprobe);
         MediaInfo mediaInfo = mapper.readValue(ffprobeProc.getInputStream(), MediaInfo.class);
         if (ffprobeProc.exitValue()!=0){
