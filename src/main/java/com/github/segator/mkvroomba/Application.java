@@ -17,6 +17,7 @@ public class Application {
     public static String audiocodec ="aac";
     public static String audiobitrate ="480k";
     public static Process ffmpeg,mkvextract,pgssrt;
+    public static File tessDataFile;
     public static void main(String[] args) throws Exception {
         Options options = new Options();
         options.addOption("help","print this message");
@@ -26,6 +27,7 @@ public class Application {
         options.addOption("audiocodec", true, "ffmpeg audio codec, default "+audiocodec);
         options.addOption("audiobitrate", true, "ffmpeg audio bitrate, default"+audiobitrate);
         options.addOption("copystrategy", true, "If the file is already proceesed how we copy the file(copy,hard,soft)");
+        options.addOption("tessdata", true, "path for tesseract data, default is working dir");
         options.addOption("dryrun", false, "do a test");
 
         HelpFormatter formatter = new HelpFormatter();
@@ -52,6 +54,11 @@ public class Application {
             }
             if (cmd.hasOption("audiobitrate")) {
                 audiobitrate = cmd.getOptionValue("audiobitrate");
+            }
+            if (cmd.hasOption("tessdata")) {
+                tessDataFile = new File(cmd.getOptionValue("tessdata"));
+            }else{
+                tessDataFile = new File("");
             }
             if (cmd.hasOption("force")) {
                 force=true;
