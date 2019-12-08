@@ -13,5 +13,5 @@ COPY --from=ffmpeg /lib/ /lib/
 
 COPY entrypoint.sh /entrypoint.sh
 RUN apt-get update && apt-get install mkvtoolnix  openjdk-8-jre -y && chmod +x /entrypoint.sh 
-ENTRYPOINT /entrypoint.sh
-CMD -help
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["-help"]
