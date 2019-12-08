@@ -109,8 +109,7 @@ public class Application {
                 System.out.println("[ERROR]"+ex);
                 task= false;
             }
-        }else{
-
+        }else if(inputFile.isDirectory()){
             for (File file : inputFile.listFiles()) {
                 File destinationFile = Paths.get(outputFile.toString(),file.getName()).toFile();
                 if(file.isDirectory()){
