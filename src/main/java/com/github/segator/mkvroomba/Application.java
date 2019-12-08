@@ -191,7 +191,7 @@ public class Application {
                 if(requireConvert.contains(stream.getCodecName().toLowerCase())){
                     requireTransmux=true;
                     System.out.println(audioString +" convert codec:"+audiocodec.toUpperCase()+"|description " +stream.getTags().getTitle());
-                    ffmpegCommand.append(" -c:").append(ffmpegAudioPositionMap).append(" "+ audiocodec.toUpperCase() + " ").append(" -b:").append(ffmpegAudioPositionMap).append(" " + audiobitrate + " ");
+                    ffmpegCommand.append(" -c:").append(ffmpegAudioPositionMap).append(" "+ audiocodec + " ").append(" -b:").append(ffmpegAudioPositionMap).append(" " + audiobitrate + " ");
                 }else{
                     ffmpegCommand.append(" -c:").append(ffmpegAudioPositionMap).append(" copy");
                 }
