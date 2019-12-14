@@ -73,7 +73,7 @@ public class Application {
                 throw new Exception("-output is mandary");
             }
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            e.printStackTrace();
             formatter.printHelp("help", options);
             System.exit(1);
             return;
@@ -272,12 +272,14 @@ public class Application {
                                 String sourceFile = Paths.get(new File("").toString(),stream.getIndex()+".sup").toAbsolutePath().toString();
                                 String outputFile = Paths.get(new File("").toString(),stream.getIndex()+".srt").toAbsolutePath().toString();
                                 String pgstosrt = "dotnet PgsToSrt.dll --input \"" + sourceFile + "\" --output \""
-                                        +outputFile+"\" --tesseractlanguage "+langConverter(stream.getTags().getLanguage());
+                                        +outputFile+"\" --tesseractdata \"" + tessDataFile.getAbsolutePath() + "\" --tesseractlanguage "+langConverter(stream.getTags().getLanguage());
+
+
                                 System.out.println("[EXEC]"+ pgstosrt);
                                 try{
                                     pgssrt = Runtime.getRuntime().exec(translateCommandline(pgstosrt));
                                     inheritIO(pgssrt.getInputStream(),System.err,"[pgstosrt]["+stream.getIndex()+"]");
-                                    inheritIO(pgssrt.getErrorStream(),new PrintStream(new NullOutputStream()),"");
+                                    inheritIO(pgssrt.getErrorStream(),System.err,"");
                                     pgssrt.waitFor();
                                     if(!subFile.exists()){
                                         throw new Exception("Something wrong in the sub to srt convertion for "+ stream.getIndex() + " "+stream.getTags().getLanguage());
