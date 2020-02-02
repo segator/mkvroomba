@@ -9,13 +9,18 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Application {
 
     public static String copyStrategy ="soft";
-    public static String audiocodec ="aac";
+    public static String audiocodec ="ac3";
     public static String audiobitrate ="480k";
+    public static Integer threads =  Runtime.getRuntime().availableProcessors()/2;
     public static Process ffmpeg,mkvextract,pgssrt;
     public static File tessDataFile;
     public static void main(String[] args) throws Exception {
@@ -29,6 +34,7 @@ public class Application {
         options.addOption("copystrategy", true, "If the file is already proceesed how we copy the file(copy,hard,soft)");
         options.addOption("tessdata", true, "path for tesseract data, default is working dir");
         options.addOption("dryrun", false, "do a test");
+        options.addOption("threads",true,"number of threads to use, default (number of cores/2)");
 
         HelpFormatter formatter = new HelpFormatter();
 
@@ -49,6 +55,9 @@ public class Application {
             if (cmd.hasOption("dryrun")) {
                 dryRun=true;
             }
+            if (cmd.hasOption("threads")) {
+                threads = Integer.valueOf(cmd.getOptionValue("audiocodec"));
+            }
             if (cmd.hasOption("audiocodec")) {
                 audiocodec = cmd.getOptionValue("audiocodec");
             }
@@ -58,7 +67,7 @@ public class Application {
             if (cmd.hasOption("tessdata")) {
                 tessDataFile = new File(cmd.getOptionValue("tessdata"));
             }else{
-                tessDataFile = new File("");
+                tessDataFile = new File("tessdata");
             }
             if (cmd.hasOption("force")) {
                 force=true;
@@ -69,6 +78,11 @@ public class Application {
 
             if (cmd.hasOption("output")) {
                 mkvOutputFile = new File(cmd.getOptionValue("output"));
+                if(mkvInputFile.isFile()){
+                    if(!mkvOutputFile.getName().toLowerCase().endsWith(".mkv")){
+                        mkvOutputFile = new File(cmd.getOptionValue("output"),mkvInputFile.getName());
+                    }
+                }
             } else {
                 throw new Exception("-output is mandary");
             }
@@ -231,6 +245,12 @@ public class Application {
             if(stream.getTags().getTitle()!=null){
                 ffmpegCommand.append(" -metadata:s:s:").append(subtiIndex).append(" title=\""+stream.getTags().getTitle()+"\" ");
             }
+            if(stream.getDisposition().getForced()==1){
+                ffmpegCommand.append(" -disposition:s:s:").append(subtiIndex).append(" forced ");
+            }
+            if(stream.getDisposition().getDefault()==1){
+                ffmpegCommand.append(" -disposition:s:s:").append(subtiIndex).append(" default ");
+            }
             subtiIndex= subtiIndex+1;
         }
 
@@ -239,7 +259,7 @@ public class Application {
             // System.out.println(stream.getCodecType());
             ffmpegCommand.append(" -map 0:").append(stream.getIndex());
         }
-        ffmpegCommand.append(" -sub_charenc UTF-8 -scodec copy  -vcodec copy ");
+        ffmpegCommand.append(" -sub_charenc UTF-8 -scodec copy  -vcodec copy -max_interleave_delta 0 -threads "+ threads);
 
         ffmpegCommand.append(" \"").append(mkvOutputFile.toString()).append("\"");
         String ffmpegCommandString = ffmpegCommand.toString().replace("{input_files}",filesToAdd.toString()).replace("{map_files}",mapsFiles.toString());
@@ -265,6 +285,8 @@ public class Application {
                         return false;
                     }
                     List<Thread> subsEncodeThreads = new ArrayList();
+                    CountDownLatch latch = new CountDownLatch(subsToEncode.size());
+                    ExecutorService pool = Executors.newFixedThreadPool(threads);
                     for (Stream stream: subsToEncode ) {
                         Thread t = new Thread(new Runnable() {
                             public void run() {
@@ -286,16 +308,15 @@ public class Application {
                                     }
                                 } catch(Exception ex) {
                                     ex.printStackTrace();
-
+                                }finally {
+                                    latch.countDown();
                                 }
                             }
                         });
-                        t.start();
+                        pool.execute(t);
                         subsEncodeThreads.add(t);
                     }
-                    for (Thread t:  subsEncodeThreads) {
-                        t.join();
-                    }
+                    latch.await();
                 }
 
 
